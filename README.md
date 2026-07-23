@@ -12,7 +12,7 @@ The current pilot forecasts the next month's provincial median price and classif
 
 ## Modalities
 
-- World Bank Real-Time Food Prices for red chili and shallot
+- World Bank Real-Time Food Prices for chili and shallot proxies
 - NASA POWER monthly agroclimate variables
 - Province-level spatial graph derived from georeferenced market centroids
 
@@ -27,24 +27,54 @@ The out-of-time experiment used 13,872 training rows through December 2023 and 1
 | ML price + weather | 4,693.01 | 9.91% | 56.3% |
 | ML price + weather + spatial | 4,641.57 | 9.83% | 57.4% |
 
-For price-spike classification, multimodal features improved PR-AUC from 0.251 to 0.292 and recall from 0.461 to 0.566 relative to the price-only classifier.
-
-The last-value baseline still has the lowest absolute forecasting error. The strongest current product interpretation is therefore multimodal **price-shock early warning**, not superior nominal-price forecasting.
+For price-spike classification, multimodal features improved PR-AUC and recall relative to the price-only classifier. The strongest current product interpretation is multimodal **price-shock early warning**, not guaranteed superiority in nominal-price forecasting.
 
 ## Repository structure
 
 ```text
-.github/workflows/pasarpulse-pipeline.yml  Reproducible data/model workflow
-data/README.md                              Data directory contract
-docs/DATASET_CARD.md                       Dataset scope and limitations
-docs/DATA_DICTIONARY.md                    Column-level documentation
-docs/DATA_PROVENANCE_AND_LICENSES.md       Sources and attribution
-docs/MODEL_CARD.md                         Model results and appropriate use
-docs/RESULTS.md                            Concise experimental results
-outputs/                                   Generated datasets, models, and reports
-src/run_pipeline.py                        End-to-end pipeline
-requirements.txt                           Python dependencies
+.github/workflows/              reproducible data/model workflow
+src/                            end-to-end pipeline
+
+data/
+├── raw/                        upstream query snapshots
+├── interim/                    normalized and reshaped datasets
+└── processed/                  training-ready and graph datasets
+
+models/                         fitted `.joblib` pipelines
+reports/
+├── metrics/                    aggregate evaluation metrics
+├── predictions/                out-of-time predictions
+└── figures/                    charts and diagnostics
+
+artifacts/                      complete ZIP bundle
+docs/datasets/                  technical documentation per dataset
+docs/                           dataset card, model card, provenance, results
 ```
+
+## Dataset locations
+
+| Dataset | Path |
+|---|---|
+| World Bank RTFP Indonesia subset | `data/raw/world_bank_rtfp_indonesia_selected.csv` |
+| NASA POWER monthly province weather | `data/raw/nasa_power_monthly_province.csv` |
+| Market-level long price table | `data/interim/rtfp_market_long.csv` |
+| Province market centroids | `data/interim/province_market_centroids.csv` |
+| Province-commodity price panel | `data/processed/province_commodity_price_panel.csv` |
+| Province spatial graph | `data/processed/province_knn_graph.csv` |
+| Final training table | `data/processed/master_modeling_table.csv` |
+
+## Technical documentation
+
+- [Dataset documentation index](docs/datasets/README.md)
+- [World Bank RTFP technical notes](docs/datasets/WORLD_BANK_RTFP.md)
+- [NASA POWER technical notes](docs/datasets/NASA_POWER.md)
+- [Spatial graph technical notes](docs/datasets/SPATIAL_GRAPH.md)
+- [Derived tables and master schema](docs/datasets/DERIVED_TABLES.md)
+- [Model output data and artefacts](docs/datasets/MODEL_OUTPUT_DATA.md)
+- [Dataset card](docs/DATASET_CARD.md)
+- [Data provenance and attribution](docs/DATA_PROVENANCE_AND_LICENSES.md)
+- [Model card](docs/MODEL_CARD.md)
+- [Experimental results](docs/RESULTS.md)
 
 ## Run locally
 
@@ -53,29 +83,11 @@ python -m pip install -r requirements.txt
 python src/run_pipeline.py
 ```
 
-The pipeline downloads open upstream data, builds the aligned multimodal table, trains baselines and multimodal models, and writes datasets, fitted models, metrics, predictions, plots, and a run report to `outputs/`.
+The source script initially writes generated files to a temporary `outputs/` staging directory. GitHub Actions then reorganizes them into `data/`, `models/`, `reports/`, and `artifacts/` before committing the snapshot.
 
-## Generated bundle
+## Data caveats
 
-A successful workflow creates:
-
-```text
-PasarPulse_Multimodal_Dataset_Model_Results.zip
-```
-
-The ZIP contains the source subsets used by the pilot, derived tables, spatial graph, master modeling table, fitted models, predictions, metrics, figures, data-quality summary, and run report.
-
-## Documentation
-
-- [Dataset card](docs/DATASET_CARD.md)
-- [Data dictionary](docs/DATA_DICTIONARY.md)
-- [Data provenance and attribution](docs/DATA_PROVENANCE_AND_LICENSES.md)
-- [Model card](docs/MODEL_CARD.md)
-- [Experimental results](docs/RESULTS.md)
-
-## Data caveat
-
-World Bank RTFP combines observed public price records with model-estimated missing prices. Trust, coverage, confidence, and interpolation indicators are retained as features. Results must not be described as training only on directly observed prices or as official Indonesian price forecasts.
+World Bank RTFP combines observed public price records with model-estimated missing prices. Trust, coverage, confidence, and interpolation indicators are retained as model features. Results must not be described as training only on directly observed prices or as official Indonesian price forecasts.
 
 NASA POWER values are sampled at province market-centroid coordinates and do not directly measure commodity-growing areas.
 
