@@ -44,6 +44,39 @@ Official documentation:
 - `https://power.larc.nasa.gov/docs/referencing/`
 - `https://power.larc.nasa.gov/docs/services/api/temporal/monthly/`
 
+## Copernicus Sentinel-2 Level-2A
+
+**Dataset**: Copernicus Sentinel-2 Level-2A bottom-of-atmosphere surface reflectance  
+**Provider**: European Union Copernicus Programme / ESA Sentinel mission  
+**Access layer used by PasarPulse**: Microsoft Planetary Computer STAC API  
+**STAC collection**: `sentinel-2-l2a`
+
+Copernicus Sentinel data are available on a free, full, and open basis subject to the Legal Notice on the use of Copernicus Sentinel Data and Service Information. PasarPulse creates modified and spatially cropped products rather than redistributing full original scenes.
+
+Required downstream attribution should include a statement equivalent to:
+
+> Contains modified Copernicus Sentinel data [year or acquisition-year range].
+
+For this snapshot, an appropriate repository-level statement is:
+
+> Contains modified Copernicus Sentinel data 2022–2025, accessed through the Microsoft Planetary Computer.
+
+Important source characteristics:
+
+- source pixels are Sentinel-2 L2A surface reflectance;
+- PasarPulse selects one scene per province per quarter;
+- images are spatially cropped and downsampled;
+- cloud and invalid pixels are masked using the Sentinel-2 Scene Classification Layer;
+- patches are anchored to market centroids and are not verified commodity fields.
+
+Official terms and documentation:
+
+- `https://dataspace.copernicus.eu/terms-and-conditions`
+- `https://sentinels.copernicus.eu/documents/247904/690755/Sentinel_Data_Legal_Notice`
+- `https://planetarycomputer.microsoft.com/docs/quickstarts/reading-stac/`
+
+The Planetary Computer is an access and processing platform. The scientific provenance of the image pixels remains Copernicus Sentinel-2.
+
 ## Derived PasarPulse files
 
 The following files are derived transformations rather than original source products:
@@ -52,10 +85,11 @@ The following files are derived transformations rather than original source prod
 - province market centroids;
 - k-nearest-province graph;
 - aligned master modeling table;
+- quarterly Sentinel-2 four-band image chips and local valid-pixel masks;
 - fitted models;
 - predictions, metrics, plots, and reports.
 
-Derivations performed by PasarPulse include filtering, reshaping, aggregation, temporal feature construction, distance calculation, weather joining, imputation inside training pipelines, and model fitting.
+Derivations performed by PasarPulse include filtering, reshaping, aggregation, temporal feature construction, distance calculation, weather joining, satellite scene selection, spatial cropping, raster resampling, SCL masking, imputation inside training pipelines, and model fitting.
 
 ## Repository code and documentation
 
@@ -63,15 +97,17 @@ Unless a separate repository license is added by the repository owner, no additi
 
 ## Recommended redistribution practice
 
-When distributing the generated bundle:
+When distributing generated bundles:
 
 1. Keep this provenance file and `DATASET_CARD.md` with the data.
-2. Preserve source identifiers and citations.
-3. Record the upstream access date and source version in `data_quality.json` or the run report.
-4. Do not remove trust, coverage, or interpolation metadata when making scientific claims.
+2. Preserve source identifiers, STAC item IDs, acquisition timestamps, and citations.
+3. Record upstream access dates and source versions in manifests or run reports.
+4. Do not remove World Bank trust, coverage, or interpolation metadata when making scientific claims.
 5. Avoid claiming that World Bank estimates are official Indonesian price statistics.
 6. State that NASA POWER values are sampled at province market-centroid coordinates.
+7. Include the Copernicus Sentinel attribution notice when sharing satellite chips or derived previews.
+8. Do not describe the satellite patches as verified chili or shallot fields.
 
 ## Reproducibility preference
 
-The preferred distribution method is to share the pipeline and allow users to rebuild the most recent source snapshot. The repository also commits a generated snapshot for competition reproducibility and inspection; this snapshot can become stale relative to the live upstream services.
+The preferred distribution method is to share the pipelines and allow users to rebuild recent source snapshots. The repository also commits generated research snapshots for competition reproducibility and inspection; these snapshots can become stale relative to live upstream services.
