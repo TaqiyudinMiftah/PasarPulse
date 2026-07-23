@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+title: PasarPulse
+type: software
+message: "Please cite PasarPulse and its upstream datasets when using this repository."
+authors:
+  - family-names: Adn
+    given-names: Taqiyudin Miftah
+repository-code: "https://github.com/TaqiyudinMiftah/PasarPulse"
+abstract: "A multimodal early-warning pilot for regional food-price shocks in Indonesia using market prices, agroclimate observations, and a province spatial graph."
+keywords:
+  - food prices
+  - multimodal machine learning
+  - Indonesia
+  - early warning
+  - agroclimate
+references:
+  - type: dataset
+    title: "Monthly food price estimates by product and market"
+    authors:
+      - family-names: Andrée
+        given-names: Bo Pieter Johannes
+    doi: "10.48529/2ZH0-JF55"
+    publisher:
+      name: World Bank Microdata Library
+  - type: dataset
+    title: "NASA Prediction Of Worldwide Energy Resources (POWER) Monthly Point API"
+    publisher:
+      name: NASA Langley Research Center
