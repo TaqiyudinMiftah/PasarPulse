@@ -75,7 +75,10 @@ jobs:
           mv outputs/forecast_plot.png reports/figures/forecast_plot.png
           mv outputs/data_quality.json reports/data_quality.json
           mv outputs/RUN_REPORT.md reports/RUN_REPORT.md
-          mv outputs/run.log reports/run.log
+
+          if [ -f outputs/run.log ]; then
+            mv outputs/run.log reports/run.log
+          fi
 
           mv outputs/*.joblib models/
 
@@ -102,8 +105,6 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
-          # Preserve generated files while incorporating documentation commits
-          # that may have reached main after this job checked out.
           git stash push --include-untracked --message organized-pasarpulse || true
           git pull --rebase origin main
           git stash pop || true
