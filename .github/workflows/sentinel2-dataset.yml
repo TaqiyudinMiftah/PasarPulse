@@ -1,0 +1,124 @@
+name: Build Sentinel-2 Image Dataset
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/sentinel2-dataset.yml'
+      - 'requirements-satellite.txt'
+      - 'src/download_sentinel2_chips.py'
+      - 'data/satellite/README.md'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.satellite-dataset-trigger'
+      - '.github/workflows/sentinel2-dataset.yml'
+      - 'requirements-satellite.txt'
+      - 'src/download_sentinel2_chips.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pasarpulse-sentinel2-dataset
+  cancel-in-progress: false
+
+jobs:
+  build-satellite-dataset:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      SAT_START_YEAR: '2022'
+      SAT_END_YEAR: '2025'
+      SAT_PATCH_PIXELS: '64'
+      SAT_PATCH_METERS: '6400'
+      SAT_MAX_SCENE_CLOUD: '85'
+      SAT_MAX_BAND_WORKERS: '5'
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: requirements-satellite.txt
+
+      - name: Install satellite dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-satellite.txt
+
+      - name: Build Sentinel-2 quarterly image chips
+        run: python src/download_sentinel2_chips.py
+
+      - name: Validate generated image dataset
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import numpy as np
+          import pandas as pd
+
+          root = Path('data/satellite')
+          metadata = pd.read_csv(root / 'metadata.csv')
+          manifest = json.loads((root / 'manifest.json').read_text())
+          assert len(metadata) > 0, 'metadata is empty'
+          assert metadata['sample_id'].is_unique, 'sample_id must be unique'
+          assert set(['adm1_name', 'reference_date', 'shard_file', 'array_index', 'valid_fraction']).issubset(metadata.columns)
+          assert metadata['valid_fraction'].between(0, 1).all()
+          assert manifest['sample_count'] == len(metadata)
+          for shard_name, group in metadata.groupby('shard_file'):
+              shard = np.load(root / shard_name)
+              assert shard['images'].ndim == 4
+              assert shard['images'].shape[1:] == (4, 64, 64)
+              assert shard['valid_masks'].shape[1:] == (64, 64)
+              assert len(shard['sample_ids']) == len(group)
+          print(metadata.groupby(metadata['reference_date'].str[:4]).size())
+          print(json.dumps(manifest, indent=2))
+          PY
+
+      - name: Package satellite dataset
+        run: |
+          mkdir -p artifacts
+          rm -f artifacts/PasarPulse_Sentinel2_Quarterly_Chips.zip
+          zip -q -r artifacts/PasarPulse_Sentinel2_Quarterly_Chips.zip \
+            data/satellite \
+            docs/datasets/SENTINEL2_IMAGERY.md \
+            reports/figures/satellite_previews
+          ls -lh artifacts/PasarPulse_Sentinel2_Quarterly_Chips.zip data/satellite/chips/*
+
+      - name: Upload satellite workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PasarPulse_Sentinel2_Quarterly_Chips
+          path: |
+            data/satellite/
+            reports/figures/satellite_previews/
+            artifacts/PasarPulse_Sentinel2_Quarterly_Chips.zip
+          retention-days: 30
+
+      - name: Commit satellite dataset to main
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          git stash push --include-untracked --message generated-sentinel2 || true
+          git pull --rebase origin main
+          git stash pop || true
+
+          git add data/satellite reports/figures/satellite_previews \
+            artifacts/PasarPulse_Sentinel2_Quarterly_Chips.zip
+
+          if git diff --cached --quiet; then
+            echo 'No satellite dataset changes to commit.'
+          else
+            git commit -m 'Add Sentinel-2 image dataset [skip ci]'
+            git push origin HEAD:main
+          fi
