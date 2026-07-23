@@ -7,6 +7,12 @@ on:
       - '.github/workflows/pasarpulse-pipeline.yml'
       - 'requirements.txt'
       - 'src/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/pasarpulse-pipeline.yml'
+      - 'requirements.txt'
+      - 'src/**'
   workflow_dispatch:
 
 permissions:
@@ -18,8 +24,10 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - name: Checkout repository
+      - name: Checkout main branch
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -70,5 +78,5 @@ jobs:
             echo 'No generated changes to commit.'
           else
             git commit -m 'Add generated PasarPulse datasets and modeling results [skip ci]'
-            git push origin main
+            git push origin HEAD:main
           fi
