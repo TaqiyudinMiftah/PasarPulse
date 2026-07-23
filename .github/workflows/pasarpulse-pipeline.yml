@@ -41,47 +41,79 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Fetch reproducible PasarPulse pipeline
+      - name: Fetch validated PasarPulse pipeline
         run: |
           mkdir -p src
           curl --fail --location --retry 5 \
             'https://raw.githubusercontent.com/TaqiyudinMiftah/tes/pasarpulse-pilot/pasarpulse/run_pipeline.py' \
             --output src/run_pipeline.py
-          # NASA POWER monthly responses can contain month 13 as an annual aggregate.
-          # Keep only actual calendar months before constructing timestamps.
+          # NASA POWER monthly responses may contain YYYY13 as an annual aggregate.
           sed -i 's/if len(str(k)) == 6 and str(k).isdigit()/if len(str(k)) == 6 and str(k).isdigit() and 1 <= int(str(k)[4:]) <= 12/g' src/run_pipeline.py
 
-      - name: Download datasets, train models, and evaluate
+      - name: Download datasets train models and evaluate
         run: python src/run_pipeline.py
 
-      - name: Package complete result bundle
+      - name: Organize generated files
         run: |
-          rm -f PasarPulse_Multimodal_Dataset_Model_Results.zip
-          cd outputs
-          zip -q -r ../PasarPulse_Multimodal_Dataset_Model_Results.zip .
+          rm -rf data/raw data/interim data/processed models reports artifacts
+          mkdir -p data/raw data/interim data/processed
+          mkdir -p models reports/metrics reports/predictions reports/figures artifacts
 
-      - name: Upload workflow artifact
+          mv outputs/IDN_RTFP_selected.csv data/raw/world_bank_rtfp_indonesia_selected.csv
+          mv outputs/NASA_POWER_monthly_province.csv data/raw/nasa_power_monthly_province.csv
+
+          mv outputs/IDN_RTFP_market_long.csv data/interim/rtfp_market_long.csv
+          mv outputs/province_market_centroids.csv data/interim/province_market_centroids.csv
+
+          mv outputs/province_commodity_price_panel.csv data/processed/province_commodity_price_panel.csv
+          mv outputs/province_knn_graph.csv data/processed/province_knn_graph.csv
+          mv outputs/master_modeling_table.csv data/processed/master_modeling_table.csv
+
+          mv outputs/metrics.csv reports/metrics/metrics.csv
+          mv outputs/test_predictions.csv reports/predictions/test_predictions.csv
+          mv outputs/model_comparison.png reports/figures/model_comparison.png
+          mv outputs/forecast_plot.png reports/figures/forecast_plot.png
+          mv outputs/data_quality.json reports/data_quality.json
+          mv outputs/RUN_REPORT.md reports/RUN_REPORT.md
+          mv outputs/run.log reports/run.log
+
+          mv outputs/*.joblib models/
+
+          rm -rf outputs
+          rm -f PasarPulse_Multimodal_Dataset_Model_Results.zip
+
+          zip -q -r artifacts/PasarPulse_Multimodal_Dataset_Model_Results.zip \
+            data models reports docs/datasets
+
+      - name: Upload organized workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: PasarPulse_Multimodal_Dataset_Model_Results
           path: |
-            outputs/
-            PasarPulse_Multimodal_Dataset_Model_Results.zip
+            data/
+            models/
+            reports/
+            docs/datasets/
+            artifacts/PasarPulse_Multimodal_Dataset_Model_Results.zip
           retention-days: 30
 
-      - name: Commit generated datasets and model results
+      - name: Commit organized datasets documentation and results
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          # Preserve generated/untracked files while incorporating documentation commits
+
+          # Preserve generated files while incorporating documentation commits
           # that may have reached main after this job checked out.
-          git stash push --include-untracked --message generated-pasarpulse || true
+          git stash push --include-untracked --message organized-pasarpulse || true
           git pull --rebase origin main
           git stash pop || true
-          git add src/run_pipeline.py outputs PasarPulse_Multimodal_Dataset_Model_Results.zip
+
+          git add -A data models reports artifacts outputs \
+            PasarPulse_Multimodal_Dataset_Model_Results.zip src/run_pipeline.py
+
           if git diff --cached --quiet; then
             echo 'No generated changes to commit.'
           else
-            git commit -m 'Add generated PasarPulse datasets and modeling results [skip ci]'
+            git commit -m 'Reorganize PasarPulse datasets and generated artefacts [skip ci]'
             git push origin HEAD:main
           fi
