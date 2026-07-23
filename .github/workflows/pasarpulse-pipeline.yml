@@ -1,0 +1,74 @@
+name: PasarPulse Data and Modeling
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pasarpulse-pipeline.yml'
+      - 'requirements.txt'
+      - 'src/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-model-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Fetch reproducible PasarPulse pipeline
+        run: |
+          mkdir -p src
+          curl --fail --location --retry 5 \
+            'https://raw.githubusercontent.com/TaqiyudinMiftah/tes/pasarpulse-pilot/pasarpulse/run_pipeline.py' \
+            --output src/run_pipeline.py
+          # NASA POWER monthly responses can contain month 13 as an annual aggregate.
+          # Keep only actual calendar months before constructing timestamps.
+          sed -i 's/if len(str(k)) == 6 and str(k).isdigit()/if len(str(k)) == 6 and str(k).isdigit() and 1 <= int(str(k)[4:]) <= 12/g' src/run_pipeline.py
+
+      - name: Download datasets, train models, and evaluate
+        run: python src/run_pipeline.py
+
+      - name: Package complete result bundle
+        run: |
+          rm -f PasarPulse_Multimodal_Dataset_Model_Results.zip
+          cd outputs
+          zip -q -r ../PasarPulse_Multimodal_Dataset_Model_Results.zip .
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PasarPulse_Multimodal_Dataset_Model_Results
+          path: |
+            outputs/
+            PasarPulse_Multimodal_Dataset_Model_Results.zip
+          retention-days: 30
+
+      - name: Commit generated datasets and model results
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/run_pipeline.py outputs PasarPulse_Multimodal_Dataset_Model_Results.zip
+          if git diff --cached --quiet; then
+            echo 'No generated changes to commit.'
+          else
+            git commit -m 'Add generated PasarPulse datasets and modeling results [skip ci]'
+            git push origin main
+          fi
