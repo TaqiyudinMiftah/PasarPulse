@@ -73,6 +73,11 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # Preserve generated/untracked files while incorporating documentation commits
+          # that may have reached main after this job checked out.
+          git stash push --include-untracked --message generated-pasarpulse || true
+          git pull --rebase origin main
+          git stash pop || true
           git add src/run_pipeline.py outputs PasarPulse_Multimodal_Dataset_Model_Results.zip
           if git diff --cached --quiet; then
             echo 'No generated changes to commit.'
