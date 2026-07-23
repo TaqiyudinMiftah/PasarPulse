@@ -1,0 +1,29 @@
+{
+  "world_bank_rows_downloaded": 52405,
+  "market_count": 223,
+  "province_count": 34,
+  "price_date_min": "2007-01-01",
+  "price_date_max": "2026-07-01",
+  "weather_rows": 7752,
+  "weather_date_min": "2007-01-01",
+  "weather_date_max": "2025-12-01",
+  "master_rows": 15980,
+  "weather_missing_fraction": 0.029787234042553186,
+  "split": {
+    "train_start": "2007-01-01",
+    "train_end": "2023-12-01",
+    "test_start": "2024-01-01",
+    "test_end": "2025-12-01",
+    "train_rows": 13872,
+    "test_rows": 1632,
+    "province_count": 34,
+    "commodities": [
+      "CHILI_RED",
+      "SHALLOT"
+    ],
+    "classification": {
+      "train_positive_rate": 0.12593713956170705,
+      "test_positive_rate": 0.21017156862745098
+    }
+  }
+}
