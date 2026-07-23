@@ -1,0 +1,40 @@
+{
+  "collection": "sentinel-2-l2a",
+  "source_stac": "https://planetarycomputer.microsoft.com/api/stac/v1",
+  "years": [
+    2022,
+    2025
+  ],
+  "temporal_resolution": "quarterly",
+  "spatial_anchor": "province market centroid from PasarPulse price data",
+  "patch_pixels": 64,
+  "patch_meters": 6400.0,
+  "bands": [
+    "B02",
+    "B03",
+    "B04",
+    "B08"
+  ],
+  "band_order": {
+    "0": "B02",
+    "1": "B03",
+    "2": "B04",
+    "3": "B08"
+  },
+  "cloud_mask_source": "SCL",
+  "invalid_scl_codes": [
+    0,
+    1,
+    3,
+    8,
+    9,
+    10,
+    11
+  ],
+  "sample_count": 544,
+  "province_count": 34,
+  "mean_valid_fraction": 0.7371678071863511,
+  "minimum_valid_fraction": 0.0,
+  "created_by": "src/download_sentinel2_chips.py",
+  "important_caveat": "Patches are centered on market centroids, not verified commodity production fields. They represent regional visual context and must not be described as crop-specific imagery."
+}
